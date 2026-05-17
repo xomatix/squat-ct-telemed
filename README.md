@@ -4,31 +4,49 @@ Prosty serwer FastAPI w `main.py`.
 
 ## Co robi
 
-- `main.py` tworzy aplikację FastAPI i montuje katalog statyczny pod `/static`.
-- statyczny katalog wybierany jest tak:
-  - `STATIC_ROOT` z env, jeśli ustawione
-  - `public_html` w katalogu roboczym lub w katalogu wyżej, jeśli istnieje
-  - inaczej `./static` obok `main.py`
-- endpointy:
-  - `GET /` – zwraca prostą stronę HTML z formularzem uploadu
-  - `POST /api/upload` – przyjmuje plik `.csv` lub `.zip` i zwraca JSON
+- `main.py` montuje ścieżkę `/static` i udostępnia stronę startową z uploadem.
+- `GET /` zwraca formularz HTML.
+- `POST /api/upload` przyjmuje plik `.csv` lub `.zip` i zwraca wynikową liczbę powtórzeń.
 
-## Jak działa `POST /api/upload`
+## Pseudokod licznika
 
-- jeśli wysłany plik to `.csv`, zapisuje go tymczasowo i przekazuje do `low_pass_counter`
-- jeśli `.zip`, wypakowuje pierwszy plik CSV z nazwą zawierającą `accelerometer`, albo dowolny plik `.csv`
-- wynikowy wykres zapisuje jako `latest_plot.png` w katalogu statycznym
-- odpowiedź JSON zawiera `repetitions` i `image_url`
+```python
+# main.py
+if request.path == '/api/upload' and method == 'POST':
+    file = request.file
+    if file.name.endswith('.zip'):
+        csv_path = extract_csv_from_zip(file)
+    else:
+        csv_path = save_temp_csv(file)
 
-## `low_pass_counter.py`
+    output_path, repetitions = low_pass_counter(csv_path, output_path=static/'latest_plot.png')
+    return {'repetitions': repetitions, 'image_url': '/static/latest_plot.png'}
+```
 
-- ładuje CSV do DataFrame Pandas
-- normalizuje nazwy kolumn do `time`, `seconds_elapsed`, `x`, `y`, `z`
-- wybiera oś czasu (`seconds_elapsed`, `time`, albo indeks)
-- oblicza wektorową wielkość przyspieszenia z osi `x`, `y`, `z`
-- szuka lokalnych maksimów znaczonych jako powtórzenia za pomocą `scipy.signal.argrelextrema`
-- tworzy wykres surowych osi z oznaczonymi szczytami
-- zapisuje wykres i zwraca liczbę powtórzeń
+```python
+# low_pass_counter.py
+df = load_csv(csv_path)
+df = normalize_columns(df)
+t, axis_label = choose_time_axis(df)
+raw_magnitude = compute_magnitude(df)
+fs = estimate_sampling_frequency(t)
+filtered = lowpass_filter(raw_magnitude, fs, cutoff_hz=5.0)
+peaks = find_peaks(filtered)
+reps = count_repetitions(peaks)
+plot_raw_axes_with_peaks(t, df, peaks)
+save_plot(output_path)
+return output_path, reps
+```
+
+## Najważniejsze funkcje
+
+- `load_accelerometer_csv` — czyta CSV do Pandas DataFrame.
+- `normalize_accel_columns` — zmienia nazwy kolumn na `time`, `seconds_elapsed`, `x`, `y`, `z`.
+- `choose_time_axis` — wybiera oś czasu z `seconds_elapsed` lub `time` albo indeksu.
+- `compute_magnitude` — oblicza długość wektora `sqrt(x^2+y^2+z^2)`.
+- `lowpass_filter` — filtruje amplitudę Butterworthem przez `butter` + `filtfilt`.
+- `find_reps` — wyszukuje lokalne maksima i zwraca piki.
+- `plot_raw_axes_with_peaks` — rysuje osie `x,y,z` i oznacza znalezione piki.
 
 ## Start
 

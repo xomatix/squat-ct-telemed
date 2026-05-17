@@ -1,5 +1,4 @@
 import math
-import os
 from pathlib import Path
 
 import matplotlib
@@ -53,6 +52,18 @@ def compute_magnitude(df: pd.DataFrame) -> np.ndarray:
     return np.sqrt(x * x + y * y + z * z)
 
 
+def lowpass_filter(signal: np.ndarray, fs: float, cutoff_hz: float = 5.0, order: int = 4) -> np.ndarray:
+    if not SCIPY_AVAILABLE:
+        raise RuntimeError("scipy.signal.butter and filtfilt required for lowpass_filter")
+
+    signal = np.asarray(signal, dtype=float)
+    if fs <= 0:
+        raise ValueError("Sampling frequency must be positive")
+
+    b, a = butter(order, cutoff_hz, btype='low', fs=fs)
+    return filtfilt(b, a, signal)
+
+
 def get_output_plot_path(csv_path: Path, output_path: Path | None = None) -> Path:
     csv_path = Path(csv_path)
     if output_path is None:
@@ -88,9 +99,10 @@ def low_pass_counter(csv_path: str | Path, output_path: str | Path | None = None
     raw_magnitude = compute_magnitude(df)
     fs = estimate_sampling_frequency(t)
 
-    threshold = np.mean(raw_magnitude) + 0.1 * np.std(raw_magnitude)
+    filtered_magnitude = lowpass_filter(raw_magnitude, fs, cutoff_hz=5.0, order=4)
+    threshold = np.mean(filtered_magnitude) + 0.1 * np.std(filtered_magnitude)
     peaks, _ = find_reps(
-        raw_magnitude,
+        filtered_magnitude,
         fs,
         order=10,
         threshold=threshold,
