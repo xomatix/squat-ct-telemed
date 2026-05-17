@@ -1,27 +1,44 @@
-# Deploy FastAPI on Render
+﻿# FastAPI low-pass counter
 
-Use this repo as a template to deploy a Python [FastAPI](https://fastapi.tiangolo.com) service on Render.
+Prosty serwer FastAPI w `main.py`.
 
-See https://render.com/docs/deploy-fastapi or follow the steps below:
+## Co robi
 
-## Manual Steps
+- `main.py` tworzy aplikację FastAPI i montuje katalog statyczny pod `/static`.
+- statyczny katalog wybierany jest tak:
+  - `STATIC_ROOT` z env, jeśli ustawione
+  - `public_html` w katalogu roboczym lub w katalogu wyżej, jeśli istnieje
+  - inaczej `./static` obok `main.py`
+- endpointy:
+  - `GET /` – zwraca prostą stronę HTML z formularzem uploadu
+  - `POST /api/upload` – przyjmuje plik `.csv` lub `.zip` i zwraca JSON
 
-1. You may use this repository directly or [create your own repository from this template](https://github.com/render-examples/fastapi/generate) if you'd like to customize the code.
-2. Create a new Web Service on Render.
-3. Specify the URL to your new repository or this repository.
-4. Render will automatically detect that you are deploying a Python service and use `pip` to download the dependencies.
-5. Specify the following as the Start Command.
+## Jak działa `POST /api/upload`
 
-    ```shell
-    uvicorn main:app --host 0.0.0.0 --port $PORT
-    ```
+- jeśli wysłany plik to `.csv`, zapisuje go tymczasowo i przekazuje do `low_pass_counter`
+- jeśli `.zip`, wypakowuje pierwszy plik CSV z nazwą zawierającą `accelerometer`, albo dowolny plik `.csv`
+- wynikowy wykres zapisuje jako `latest_plot.png` w katalogu statycznym
+- odpowiedź JSON zawiera `repetitions` i `image_url`
 
-6. Click Create Web Service.
+## `low_pass_counter.py`
 
-Or simply click:
+- ładuje CSV do DataFrame Pandas
+- normalizuje nazwy kolumn do `time`, `seconds_elapsed`, `x`, `y`, `z`
+- wybiera oś czasu (`seconds_elapsed`, `time`, albo indeks)
+- oblicza wektorową wielkość przyspieszenia z osi `x`, `y`, `z`
+- szuka lokalnych maksimów znaczonych jako powtórzenia za pomocą `scipy.signal.argrelextrema`
+- tworzy wykres surowych osi z oznaczonymi szczytami
+- zapisuje wykres i zwraca liczbę powtórzeń
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/render-examples/fastapi)
+## Start
 
-## Thanks
+```shell
+cd squat-ct-telemed
+python -m uvicorn main:app --reload
+```
 
-Thanks to [Harish](https://harishgarg.com) for the [inspiration to create a FastAPI quickstart for Render](https://twitter.com/harishkgarg/status/1435084018677010434) and for some sample code!
+## Wejście/wyjście
+
+- wejście: `file` w `multipart/form-data` (`.csv` lub `.zip`)
+- wyjście: JSON z `repetitions` i `image_url`
+- wykres: `/static/latest_plot.png`
