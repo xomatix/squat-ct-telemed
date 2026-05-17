@@ -6,7 +6,7 @@ Prosty serwer FastAPI w `main.py`.
 
 - `main.py` montuje ścieżkę `/static` i udostępnia stronę startową z uploadem.
 - `GET /` zwraca formularz HTML.
-- `POST /api/upload` przyjmuje plik `.csv` lub `.zip` i zwraca wynikową liczbę powtórzeń.
+- `POST /api/upload` przyjmuje plik `.csv` i zwraca wynikową liczbę powtórzeń.
 
 ## Pseudokod licznika
 
@@ -14,10 +14,7 @@ Prosty serwer FastAPI w `main.py`.
 # main.py
 if request.path == '/api/upload' and method == 'POST':
     file = request.file
-    if file.name.endswith('.zip'):
-        csv_path = extract_csv_from_zip(file)
-    else:
-        csv_path = save_temp_csv(file)
+    csv_path = save_temp_csv(file)
 
     output_path, repetitions = low_pass_counter(csv_path, output_path=static/'latest_plot.png')
     return {'repetitions': repetitions, 'image_url': '/static/latest_plot.png'}
@@ -57,6 +54,6 @@ python -m uvicorn main:app --reload
 
 ## Wejście/wyjście
 
-- wejście: `file` w `multipart/form-data` (`.csv` lub `.zip`)
+- wejście: `file` w `multipart/form-data` (`.csv`)
 - wyjście: JSON z `repetitions` i `image_url`
 - wykres: `/static/latest_plot.png`

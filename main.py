@@ -57,9 +57,9 @@ INDEX_HTML = """<!DOCTYPE html>
   <div class="page">
     <div class="card">
       <h1>Low-pass Counter</h1>
-      <p>Wgraj plik <code>.csv</code> lub <code>.zip</code> z plikiem Accelerometer.csv.</p>
+      <p>Wgraj plik <code>.csv</code> z danymi accelerometru.</p>
       <label for="fileInput">Wybierz plik</label>
-      <input id="fileInput" type="file" accept=".csv,.zip" />
+      <input id="fileInput" type="file" accept=".csv" />
       <button id="uploadButton" type="button">Prześlij i policz</button>
       <div class="result" id="result"></div>
       <div class="footer">Po załadowaniu zobaczysz liczbę powtórzeń oraz wygenerowany wykres.</div>
@@ -71,10 +71,9 @@ INDEX_HTML = """<!DOCTYPE html>
       <p>Obsługiwane pliki:</p>
       <ul>
         <li><code>.csv</code> - pojedynczy plik Accelerometer.csv</li>
-        <li><code>.zip</code> - archiwum zawierające plik <code>Accelerometer*.csv</code></li>
       </ul>
       <p>Form-data:</p>
-      <pre style="background:#f4f4f4;padding:10px;border-radius:8px;">file: [plik.csv lub plik.zip]</pre>
+      <pre style="background:#f4f4f4;padding:10px;border-radius:8px;">file: [plik.csv]</pre>
       <p>Odpowiedź JSON:</p>
       <pre style="background:#f4f4f4;padding:10px;border-radius:8px;">{
   "repetitions": 12,
